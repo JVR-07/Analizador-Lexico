@@ -1,3 +1,4 @@
+![Wallpaper](https://raw.githubusercontent.com/JVR-07/College-Projects/refs/heads/main/Resource/wallpaper_itt.png)
 # Analizador Léxico Multilenguaje – JavaCC
 Este proyecto implementa un **analizador léxico** desarrollado con **JavaCC (Java Compiler Compiler)**, diseñado para reconocer y clasificar tokens de diferentes lenguajes de programación.
 El analizador fue entrenado con más de **300 palabras clave**, que abarcan conceptos de **C, C++, Java, Python, JavaScript, Rust, SQL**, entre otros.
