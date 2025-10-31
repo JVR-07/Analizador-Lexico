@@ -1,0 +1,24 @@
+if else while for do loop function def fn lambda return yield
+class extends interface trait implements impl struct import require crate
+export using use from mod sizeof alignof unsafe print println write
++ - * / % ** ++ -- = += -= *= /= %= : == === equals != !== < > <= >=
+&& || ! and or not & | ^ ~ << >> >>> &= |= ^= <<= >>= >>>=
+<=> ?? ? ?: |> => -> :: ... .. ..=
+var let dynamic dyn int string float double boolean char byte long short decimal bigint complex
+const abstract static final readonly constexpr mutable volatile mut null undefined None void true false
+new public private protected pub package namespace global instanceof typeof typedef self Self
+vector uint ulong ushort sbyte array list dict arr
+try catch finally throw throws panic! switch case default match continue break goto in on
+synchronized async tokio await explicit operator as is dynamic_cast static_cast template typename
+requires concept typevar ref out move mov borrow lifetime box fixed stackalloc thread_local
+sleep timeout spawn event add remove delegate value get set covariant contravariant
+select where "group by" "order by" ascending descending insert update delete having
+join inner outer left right cross natural union intersect except distinct all any some
+exists between like primary foreign references constraint database table column row
+schema view index trigger transaction commit rollback grant revoke alter drop
+macro println! vec! assert! select! Option Some Result Ok Err Iterator
+Clone Copy Hash Rc Mutex Channel Sender Receiver serde json xml yaml toml csv txt sql
+pass with nonlocal defer fallthrough guard unless until redo next strictfp transient
+native internal checked unchecked lock params file friend virtual override derive
+thread coroutine future promise parallel sequential critical barrier semaphore ensures
+memory inline jpm ( ) { } [ ] ; ,

@@ -1,0 +1,504 @@
+// =======================================================
+// PROGRAMA DE EJEMPLO - SISTEMA DE GESTIÓN DE USUARIOS
+// =======================================================
+
+// Importar módulos necesarios
+import std_io
+import std_collections
+from database import User Session
+using namespace std
+
+// Constantes globales
+const int MAX_USERS = 1000
+const string APP_VERSION = "1.0.0"
+const double TAX_RATE = 0.15
+
+// Estructura de datos para usuario
+struct User {
+    public string name
+    public string email
+    private int age
+    protected double balance
+    mutable DateTime created_at
+}
+
+// Interfaz para operaciones de usuario
+interface UserOperations {
+    void createUser(string name string email)
+    bool deleteUser(int user_id)
+    User findUser(string email)
+}
+
+// Clase principal que implementa la interfaz
+class UserManager implements UserOperations {
+    private vector<User> users
+    private static int user_count = 0
+    public readonly string database_url
+    
+    // Constructor
+    public UserManager(string db_url) {
+        this_database_url = db_url
+        this_users = vec![]
+        user_count = 0
+    }
+    
+    // Implementación de métodos de la interfaz
+    void createUser(string name string email) {
+        if (name == null || email == null) {
+            throw new ArgumentException("Nombre y email son requeridos")
+        }
+        
+        User new_user = new User {
+            name: name,
+            email: email,
+            age: 0,
+            balance: 0.0,
+            created_at: DateTime_now()
+        }
+        
+        users_push(new_user)
+        user_count++
+        
+        print("Usuario creado: " + name)
+    }
+    
+    bool deleteUser(int user_id) {
+        if (user_id < 0 || user_id >= users_size()) {
+            return false
+        }
+        
+        users_erase(users_begin() + user_id)
+        user_count--
+        return true
+    }
+    
+    User findUser(string email) {
+        for (int i = 0; i < users_size(); i++) {
+            User user = users[i]
+            if (user_email equals email) {
+                return user
+            }
+        }
+        return null
+    }
+    
+    // Método estático
+    static int getUserCount() {
+        return user_count
+    }
+}
+
+// Función asíncrona para procesamiento en lote
+async Future<void> processUserBatch(vector<User> user_batch) {
+    try {
+        await Database_connect()
+        
+        for (int i = 0; i < user_batch_size(); i++) {
+            User user = user_batch[i]
+            if (user_balance > 1000.0) {
+                double tax = user_balance * TAX_RATE
+                user_balance = user_balance - tax
+                println("Impuesto aplicado: " + tax_toString())
+            }
+            
+            // Operación segura con null checking
+            string safe_name = user_name ?? "Usuario Anónimo"
+            print("Procesando: " + safe_name)
+        }
+        
+    } catch (Exception e) {
+        println("Error en procesamiento: " + e_getMessage())
+        throw e
+    } finally {
+        Database_close()
+    }
+}
+
+// Función con templates y conceptos
+template<typename T>
+requires Hash<T> && Clone<T>
+class Cache {
+private:
+    map<string T> storage
+    int max_size
+    
+public:
+    explicit Cache(int size) : max_size(size) {}
+    
+    void set(string key T value) {
+        if (storage_size() >= max_size) {
+            storage_erase(storage_begin())
+        }
+        storage[key] = value
+    }
+    
+    Option<T> get(string key) {
+        auto it = storage_find(key)
+        if (it != storage_end()) {
+            return Some(it->second)
+        }
+        return None
+    }
+}
+
+// Manejo de concurrencia
+class TransactionProcessor {
+private:
+    Mutex lock
+    Channel<Transaction> channel
+    Sender<Transaction> sender
+    Receiver<Transaction> receiver
+    
+public:
+    TransactionProcessor() {
+        auto pair = Channel<Transaction>::create()
+        sender = move(pair_first)
+        receiver = move(pair_second)
+    }
+    
+    void startProcessing() {
+        thread processing_thread([this]() {
+            while (true) {
+                Transaction tx = receiver_recv() await
+                processTransaction(tx)
+            }
+        })
+        
+        processing_thread_detach()
+    }
+    
+private:
+    void processTransaction(Transaction tx) {
+        lock_lock()
+        try {
+            // Procesar transacción crítica
+            if (tx_amount > 0) {
+                updateBalance(tx_user_id tx_amount)
+                commitTransaction(tx)
+            }
+        } catch (Exception e) {
+            rollbackTransaction(tx)
+            println("Transacción fallida: " + e_getMessage())
+        } finally {
+            lock_unlock()
+        }
+    }
+}
+
+// Consultas SQL embebidas
+class UserRepository {
+public:
+    vector<User> getUsersByAge(int min_age int max_age) {
+        string query = 
+            "SELECT name email age balance " 
+            "FROM users " 
+            "WHERE age BETWEEN ? AND ? " 
+            "ORDER BY age ASC"
+        
+        return Database_execute(query min_age max_age)
+    }
+    
+    vector<User> getActiveUsers() {
+        string query = 
+            "SELECT DISTINCT u_* " 
+            "FROM users u " 
+            "INNER JOIN sessions s ON u_id = s_user_id " 
+            "WHERE s_last_activity > DATE_SUB(NOW() INTERVAL 1 DAY) " 
+            "GROUP BY u_id " 
+            "HAVING COUNT(s_id) > 0 " 
+            "ORDER BY u_name ASC"
+        
+        return Database_execute(query)
+    }
+}
+
+// Funciones de utilidad con pattern matching
+Result<int string> parseUserId(string input) {
+    match (input) {
+        case string s when s_length() == 0:
+            return Err("ID vacío")
+        case string s when !s_all(char_IsDigit):
+            return Err("ID debe ser numérico")
+        default:
+            int id = int_parse(input)
+            if (id > 0) {
+                return Ok(id)
+            } else {
+                return Err("ID debe ser positivo")
+            }
+    }
+}
+
+// Operadores sobrecargados
+class Money {
+public:
+    double amount
+    string currency
+    
+    Money(double amt string curr) : amount(amt) currency(curr) {}
+    
+    Money operator+(const Money& other) {
+        if (this_currency != other_currency) {
+            throw CurrencyMismatchException()
+        }
+        return Money(this_amount + other_amount this_currency)
+    }
+    
+    bool operator==(const Money& other) {
+        return this_amount == other_amount && this_currency == other_currency
+    }
+}
+
+// Programa principal
+void main() {
+    // Inicialización
+    UserManager manager = new UserManager("postgresql://localhost:5432/mydb")
+    Cache<User> user_cache = new Cache<User>(100)
+    
+    try {
+        // Crear algunos usuarios
+        manager_createUser("Juan Pérez" "juan@email.com")
+        manager_createUser("María García" "maria@email.com")
+        manager_createUser("Carlos López" "carlos@email.com")
+        
+        // Procesar en lote
+        vector<User> users = manager_getAllUsers()
+        Future<void> batch_process = processUserBatch(users)
+        
+        // Esperar completación
+        batch_process_await
+        
+        // Consultas complejas
+        vector<User> young_users = manager_getUsersByAge(18 25)
+        vector<User> active_users = manager_getActiveUsers()
+        
+        // Usar cache
+        for (int i = 0; i < active_users_size(); i++) {
+            User user = active_users[i]
+            user_cache_set(user_email user_clone())
+        }
+        
+        // Buscar en cache
+        Option<User> cached_user = user_cache_get("juan@email.com")
+        match (cached_user) {
+            case Some(User user):
+                println("Usuario en cache: " + user_name)
+            case None:
+                println("Usuario no encontrado en cache")
+        }
+        
+        // Operaciones matemáticas
+        double total_balance = 0.0
+        for (int i = 0; i < users_size(); i++) {
+            total_balance = total_balance + users[i]_balance
+        }
+        
+        double average = total_balance / users_size()
+        println("Balance promedio: " + average_toString())
+        
+        // Operaciones bitwise
+        int flags = 0b1010
+        int mask = 0b1100
+        int result = flags & mask
+        
+        // Manipulación de strings
+        string message = "Hola Mundo"
+        string reversed = message_reverse()
+        string upper = message_toUpperCase()
+        
+    } catch (DatabaseException e) {
+        log_error("Error de base de datos" e_getMessage())
+        panic("No se puede continuar sin base de datos")
+    } catch (Exception e) {
+        log_error("Error inesperado" e_getMessage())
+    } finally {
+        println("Procesamiento completado")
+        printStatistics()
+    }
+}
+
+// Funciones adicionales
+void printStatistics() {
+    int total_users = UserManager_getUserCount()
+    println("Total de usuarios: " + total_users_toString())
+    println("Memoria usada: " + getMemoryUsage_toString() + " MB")
+}
+
+double getMemoryUsage() {
+    // Simular uso de memoria
+    return 45.7
+}
+
+// Delegados y eventos
+class UserNotifier {
+public:
+    event Action<User> UserCreated
+    event Action<int> UserDeleted
+    
+    void notifyUserCreated(User user) {
+        if (UserCreated != null) {
+            UserCreated(user)
+        }
+    }
+    
+    void notifyUserDeleted(int user_id) {
+        if (UserDeleted != null) {
+            UserDeleted(user_id)
+        }
+    }
+}
+
+// Clase con propiedades
+class Configuration {
+private:
+    string api_key_value
+    int timeout_value
+    
+public:
+    string get_api_key() { return api_key_value }
+    void set_api_key(string value) {
+        if (value != null && value_length() > 0) {
+            api_key_value = value
+        }
+    }
+    
+    int get_timeout() { return timeout_value }
+    void set_timeout(int value) {
+        if (value > 0 && value <= 300) {
+            timeout_value = value
+        }
+    }
+}
+
+// Función con parámetros variables
+double calculateAverage(params double[] numbers) {
+    if (numbers_length() == 0) {
+        return 0.0
+    }
+    
+    double sum = 0.0
+    for (int i = 0; i < numbers_length(); i++) {
+        sum = sum + numbers[i]
+    }
+    
+    return sum / numbers_length()
+}
+
+// Operador de coalescencia nula
+string getSafeUsername(User user) {
+    if (user != null && user_name != null) {
+        return user_name
+    }
+    return "Invitado"
+}
+
+// Range operator
+vector<int> generateNumbers() {
+    vector<int> numbers
+    for (int i = 1; i <= 100; i++) {
+        numbers_push(i * 2)
+    }
+    return numbers
+}
+
+// Función de utilidad para arrays
+int array_length<T>(T[] arr) {
+    return arr_length()
+}
+
+// Función de utilidad para strings
+int string_length(string str) {
+    return str_length()
+}
+
+// Bucle while ejemplo
+void processUntilComplete() {
+    int counter = 0
+    while (counter < 10) {
+        println("Iteración: " + counter_toString())
+        counter++
+        if (counter == 5) {
+            break
+        }
+    }
+}
+
+// Switch case ejemplo
+string getDayName(int day) {
+    switch (day) {
+        case 1:
+            return "Lunes"
+        case 2:
+            return "Martes"
+        case 3:
+            return "Miércoles"
+        case 4:
+            return "Jueves"
+        case 5:
+            return "Viernes"
+        case 6:
+            return "Sábado"
+        case 7:
+            return "Domingo"
+        default:
+            return "Día inválido"
+    }
+}
+
+// Operaciones lógicas complejas
+bool validateUser(User user) {
+    return user != null 
+        && user_name != null 
+        && user_name_length() > 0
+        && user_email != null
+        && user_email contains "@"
+        && user_age >= 18
+        && user_age <= 120
+}
+
+// Arrays multidimensionales
+void processMatrix() {
+    int[3][3] matrix = {
+        {1, 2, 3},
+        {4, 5, 6},
+        {7, 8, 9}
+    }
+    
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            print(matrix[i][j]_toString() + " ")
+        }
+        println("")
+    }
+}
+
+// Función recursiva
+int factorial(int n) {
+    if (n <= 1) {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+// Lambda functions
+auto square = [](int x) -> int { return x * x }
+auto add = [](int a int b) -> int { return a + b }
+
+// Uso de lambdas
+void useLambdas() {
+    vector<int> numbers = {1, 2, 3, 4, 5}
+    vector<int> squares
+    
+    for (int num in numbers) {
+        squares_push(square(num))
+    }
+    
+    int total = 0
+    for (int num in squares) {
+        total = add(total num)
+    }
+    
+    println("Suma de cuadrados: " + total_toString())
+}
+
+// Fin del programa

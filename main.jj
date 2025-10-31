@@ -1,0 +1,399 @@
+options {
+  STATIC = false;
+}
+
+PARSER_BEGIN(Main)
+import java.io.*;
+import java.util.*;
+
+public class Main {
+
+  private static final Map<Integer, String> TOKEN_NAMES = new HashMap<>();
+  static {
+    // 1) Intentamos poblar TOKEN_NAMES con los nombres simbólicos (MainConstants.*)
+    try {
+        for (java.lang.reflect.Field f : MainConstants.class.getFields()) {
+            if (f.getType() == int.class) {
+                try {
+                    int val = f.getInt(null);
+                    String name = f.getName();
+                    // Excluimos arrays y campos de texto que JavaCC genera
+                    if (!name.equals("tokenImage") && !name.equals("lexStateNames")) {
+                        TOKEN_NAMES.put(val, name);
+                    }
+                } catch (IllegalAccessException ignored) { }
+            }
+        }
+    } catch (Throwable t) {
+        // Si algo falla, dejamos TOKEN_NAMES vacío para usar fallback más abajo.
+      }
+
+    // 2) Complemento: si hay índices no mapeados, rellenamos con tokenImage (representación literal).
+    try {
+        String[] images = MainConstants.tokenImage;
+        for (int i = 0; i < images.length; i++) {
+          TOKEN_NAMES.putIfAbsent(i, images[i]);
+        }
+    } catch (Throwable t) {
+        // ignore — si tampoco existe tokenImage, dejaremos DESCONOCIDO luego
+      }
+  }
+
+    
+  public static void main(String[] args) throws Exception {
+    Scanner sc = new Scanner(System.in);
+
+    while (true) {
+        System.out.println("\n=== Analizador Léxico ===");
+        System.out.println("1. Ingresar texto manualmente");
+        System.out.println("2. Analizar archivo .txt");
+        System.out.println("3. Salir");
+        System.out.print("> ");
+
+        String op = sc.nextLine().trim();
+            switch (op) {
+                case "1":
+                    analizarInteractivo(sc);
+                    break;
+                case "2":
+                    analizarArchivo(sc);
+                    break;
+                case "3":
+                    System.out.println("Saliendo...");
+                    return;
+                default:
+                    System.out.println("Opción no válida.");
+            }
+    }
+  }
+
+  private static void analizarInteractivo(Scanner sc) {
+    System.out.println("Modo interactivo (Ctrl + C o 'salir' para terminar)");
+      while (true) {
+          System.out.print("> ");
+          String input = sc.nextLine();
+          if (input.equalsIgnoreCase("salir")) break;
+
+          analizarCadena(input);
+      }
+  }
+
+  private static void analizarArchivo(Scanner sc) {
+    System.out.print("Nombre del archivo .txt: ");
+    String nombre = sc.nextLine();
+
+    try {
+        StringBuilder contenido = new StringBuilder();
+        BufferedReader br = new BufferedReader(new FileReader(nombre));
+        String linea;
+        while ((linea = br.readLine()) != null)
+            contenido.append(linea).append("\n");
+            br.close();
+            analizarCadena(contenido.toString());
+      } catch (IOException e) {
+            System.err.println("Error al leer el archivo: " + e.getMessage());
+        }
+  }
+
+  private static void analizarCadena(String input) {
+    try {
+        MainTokenManager tm = new MainTokenManager(
+            new SimpleCharStream(new StringReader(input))
+        );
+
+        Token token;
+        while ((token = tm.getNextToken()).kind != MainConstants.EOF) {
+            if (token.kind == MainConstants.ESPACIO)
+                continue;
+
+            String tipo = TOKEN_NAMES.getOrDefault(token.kind, "DESCONOCIDO");
+            System.out.printf("→ Token: %-15s | Tipo: <%s>\n", token.image, tipo);
+        }
+      } catch (TokenMgrError e) {
+          System.err.println("Error léxico: " + e.getMessage());
+        } catch (Exception e) {
+          System.err.println("Error general: " + e.getMessage());
+        }
+  }
+}
+PARSER_END(Main)
+
+
+  // =======================================================
+  //                 DEFINICIÓN DE TOKENS
+  // =======================================================
+
+  /* === Palabras reservadas === */
+  TOKEN : {
+    < PREGUNTAR: "if" > |
+    < SINO: "else" > |
+    < HACER: "do" > |
+    < CICLO: "while" | "loop" > |
+    < CICLO_HASTA: "for" > |
+    < FUNCION: "function" | "def" | "fn" | "lambda" > |
+    < REGRESAR: "return" | "yield" > |
+    < CLASE: "class" > |
+    < HERENCIA: "extends" > |
+    < INTERFAZ: "interface" | "trait" > |
+    < IMPLEMENTA: "implements" | "impl" > |
+    < ESTRUCTURA: "struct" > |
+    < IMPORTAR: "import" | "require" | "crate" > |
+    < EXPORTAR: "export" > |
+    < USAR: "using" | "use" > |
+    < ORIGEN: "from" > |
+    < MODULO: "mod" > |
+    < TAMAÑO_DE: "sizeof" > |
+    < ALINEAMIENTO_DE: "alignof" > |
+    < INSEGURO: "unsafe" > |
+    < IMPRIMIR: "print" | "println" | "write" > |
+
+  /* === Operadores === */
+    < ARITMETICA: "+" | "-" | "*" | "/" | "%" > |
+    < UNARIOS: "**" | "++" | "--" > |
+    < ASIGNACION: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | ":" > |
+    < COMPARACION: "==" | "===" | "equals" | "!=" | "!==" | "<" | ">" | "<=" | ">=" > |
+    < LOGICOS: "&&" | "||" | "!" | "and" | "or" | "not" > |
+    < BITWISE: "&" | "|" | "^" | "~" | "<<" | ">>" | ">>>" > |
+    < ASIGNACION_COMPUESTA: "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=" > |
+    < OPERADOR_TRES_VIAS: "<=>" > |
+    < OPERADOR_COALESCENCIA: "??" > |
+    < OPERADOR_SEGURO: "?" > |
+    < OPERADOR_TERNARIO: "?:" > |
+    < OPERADOR_ENCADENADOR: "|>" > |
+    < FLECHA: "=>" | "->" > |
+    < RESOLUCION_AMBITO: "::" > |
+    < SPREAD: "..." > |
+    < RANGO: ".." | "..=" > |
+
+  /* === Tipos y variables === */
+    < DATO_DINAMICO: "var" | "let" | "dynamic" | "dyn" > |
+    < DATO_CADENA: "string" > |
+    < DATO_CARACTER: "char" > |
+    < DATO_BYTE: "byte" > |
+    < DATO_DECIMAL: "float" | "double" | "decimal" > |
+    < DATO_ESTATICO: "int" | "long" | "short" | "bigint" > |
+    < DATO_COMPLEJO: "complex" > |
+    < DATO_BINARIO: "boolean" > |
+    < CONSTANTE: "const" > |
+    < MODIFICADOR: "abstract" | "static" | "final" | "readonly" | "constexpr" | "mutable" | "volatile" | "mut" > |
+    < DATO_VACIO: "null" | "undefined" | "None" > |
+    < PROCEDIMIENTO: "void" > |
+    < BANDERA: "true" | "false" > |
+    < NUEVO: "new" > |
+    < ACCESO: "public" | "private" | "protected" | "pub" > |
+    < PAQUETE: "package" | "namespace" | "global" > |
+    < TIPO_INSTANCIA: "instanceof" > |
+    < TIPO_DATO:  "typeof" > |
+    < TIPO_FUNCION: "typedef" > |
+    < TIPO_PROPIO: "self" | "Self" > |
+    < VECTOR: "vector" > |
+    < DATO_ENTERO_SIN_SIGNO: "uint" | "ulong" | "ushort" | "sbyte" > |
+    < DATO_COLECCION: "array" | "list" | "dict" | "arr" > |
+
+  /* === Control y excepciones === */
+    < INTENTA: "try" > |
+    < ATRAPA: "catch" > |
+    < FINAL: "finally" > |
+    < LANZA: "throw" | "throws" > |
+    < PANICO: "panic!" > |
+    < ELIGE: "switch" > | 
+    < CASO: "case" > |
+    < POR_DEFECTO: "default" > |
+    < COINCIDE: "match" > |
+    < CONTINUAR: "continue" > |
+    < DETENER: "break" > |
+    < VE_A: "goto" > | 
+    < EN: "in" | "on" > |
+
+  /* === Concurrencia, asincronía y referencias === */
+    < SINCRONIZADO: "synchronized" > |
+    < ASINCRONICO: "async" | "tokio" > |
+    < ESPERA: "await" > |
+    < EXPLICITO: "explicit" > |
+    < OPERADOR: "operator" > |
+    < COMO: "as" > |
+    < ES: "is" > |
+    < CONVERSION_DINAMICA: "dynamic_cast" > |
+    < CONVERSION_ESTATICA: "static_cast" > |
+    < PLANTILLA: "template" > |
+    < TIPO_PLANTILLA: "typename" > |
+    < REQUERIMIENTOS: "requires" > |
+    < CONCEPTO: "concept" > |
+    < TIPO_VARIABLE: "typevar" > |
+    < REFERENCIA: "ref" > |
+    < SALIDA: "out" > |
+    < MOVER: "move" | "mov" > |
+    < PRESTAMO: "borrow" > |
+    < TIEMPO_VIDA: "lifetime" > |
+    < ASIGNAR_MONTICULO: "box" > |
+    < FIJAR_MEMORIA: "fixed" > |
+    < ASIGNAR_STACK: "stackalloc" > |
+    < HILO_LOCAL: "thread_local" > |
+    < DUERME: "sleep" > |
+    < TIEMPO_ESPERA: "timeout" > |
+    < APARECER: "spawn" > |
+    < EVENTO: "event" > |
+    < AGREGAR_EVENTO: "add" > |
+    < REMOVER_EVENTO: "remove" > |
+    < DELEGADO: "delegate" > |
+    < VALOR: "value" > |
+    < OBTENER: "get" > |
+    < ESTABLECER: "set" > |
+    < COVARIANZA: "covariant" > |
+    < CONTRAVARIANZA: "contravariant" > |
+
+  /* === SQL y LINQ === */
+    < SELECCIONAR: "select" > |
+    < DONDE: "where" > |
+    < AGRUPAR_POR: "group by" > |
+    < ORDENAR_POR: "order by" > |
+    < ASCENDENTE: "ascending" > |
+    < DESCENDENTE: "descending" > |
+    < INSERTAR: "insert" > |
+    < ACTUALIZAR: "update" > |
+    < ELIMINAR: "delete" > |
+    < TENIENDO: "having" > |
+    < UNION: "join" > |
+    < INTERNA: "inner" > |
+    < EXTERNA: "outer" > |
+    < IZQUIERDA: "left" > |
+    < DERECHA: "right" > |
+    < CRUZADA: "cross" > |
+    < NATURAL: "natural" > |
+    < UNION_RESULTADOS: "union" > |
+    < INTERSECCION: "intersect" > |
+    < EXCEPTO: "except" > |
+    < DISTINTO:  "distinct" > |
+    < TODOS: "all" > |
+    < CUALQUIER: "any" > |
+    < ALGUN: "some" > |
+    < EXISTE: "exists" > |
+    < ENTRE: "between" > |
+    < COMO_SQL: "like" > |
+    < PRIMARIO: "primary" > |
+    < FORANEO: "foreign" > |
+    < REFERENCIAS: "references" > |
+    < RESTRICCION: "constraint" > |
+    < BD: "database" > |
+    < TABLA: "table" > |
+    < COLUMNA: "column" > |
+    < FILA: "row" > |
+    < ESQUEMA: "schema" > |
+    < VISTA: "view" > |
+    < INDICE: "index" > |
+    < DISPARADOR: "trigger" > |
+    < TRANSACCIONES: "transaction" > |
+    < MENSAJE: "commit" > |
+    < REVERTIR: "rollback" > |
+    < CONCEDER: "grant" > |
+    < REVOCAR: "revoke" > |
+    < ALTERAR: "alter" > |
+    < BORRAR: "drop" > |
+
+  /* === Rust y macros === */
+    < MACRO: "macro" > |
+    < IMPRIMIR_MACRO: "println!" > |
+    < VECTOR_MACRO: "vec!" > |
+    < ASERCION_MACRO: "assert!" > |
+    < SELECCIONAR_MACRO: "select!" > |
+    < OPCIONAL: "Option" > |
+    < PRESENTE: "Some" > |
+    < RESULTADO: "Result" > |
+    < EXITOSO: "Ok" > |
+    < ERROR: "Err" > |
+    < ITERADOR: "Iterator" > |
+    < CLONAR: "Clone" > |
+    < COPIAR: "Copy" > |
+    < HASH: "Hash" > |
+    < CONTADOR_REFERENCIAS: "Rc" > |
+    < EXCLUSION_MUTUA: "Mutex" > |
+    < CANAL: "Channel" > |
+    < REMITENTE: "Sender" > |
+    < RECEPTOR: "Receiver" > |
+    < SERIALIZACION: "serde" > 
+  }
+
+  /* === Más palabras reservadas para completar las 300 === */
+TOKEN : {
+  < PASAR: "pass" > |
+  < CON: "with" > |
+  < NO_LOCAL: "nonlocal" > |
+  < APLAZA: "defer" > |
+  < SIGUIENTE_CASO: "fallthrough" > |
+  < GUARDIA: "guard" > |
+  < A_MENOS_QUE: "unless" > |
+  < HASTA: "until" > |
+  < REPITE: "redo" > |
+  < SIGUIENTE: "next" > |
+  < CALCULO_FLOTANTE_ESTRICTO: "strictfp" > |
+  < TRANSITORIO: "transient" > |
+  < NATIVO: "native" > |
+  < ACTUAL: "internal" > |
+  < COMPROBADO: "checked" > |
+  < SIN_COMPROBAR: "unchecked" > |
+  < BLOQUEO: "lock" > |
+  < PARAMETROS: "params" > |
+  < ARCHIVO: "file" > |
+  < AMIGO: "friend" > |
+  < VIRTUAL: "virtual" > |
+  < SOBRE_ESCRIBE: "override" > |
+  < DERIVAR: "derive" > |
+  < HILO: "thread" > |
+  < CORRUTINA: "coroutine" > |
+  < FUTURO: "future" > | 
+  < PROMESA: "promise" > | 
+  < PARALELO: "parallel" > | 
+  < SECUENCIAL: "sequential" > | 
+  < CRITICO: "critical" > | 
+  < BARRERA: "barrier" > | 
+  < SEMAFORO: "semaphore" > |
+  < ASEGURA: "ensures" > |
+  < MEMORIA: "memory" > |
+  < EN_LINEA: "inline" > |
+  < SALTO: "jpm" > |
+  < FORMATO_JSON: "json" > |
+  < FORMATO_XML: "xml" > |
+  < FORMATO_TXT: "txt" > |
+  < FORMATO_SQL: "sql" > 
+}
+
+// Simbolos sintacticos
+TOKEN : {
+  < PAREN_IZQ: "(" > |
+  < PAREN_DER: ")" > |
+  < LLAVE_IZQ: "{" > |
+  < LLAVE_DER: "}" > |
+  < CORCHETE_IZQ: "[" > |
+  < CORCHETE_DER: "]" > |
+  < PUNTOCOMA: ";" > |
+  < COMA: "," > 
+}
+
+// Caracteres individuales básicos
+TOKEN : {
+  < LETRA: ["a"-"z","A"-"Z"] > | 
+  < DIGITO: ["0"-"9"] > | 
+  < GUION_BAJO: "_" > | 
+  < PUNTO: "." > | 
+  < COMILLA_DOBLE: "\"" > |
+  < COMILLA_SIMPLE: "'" > | 
+  < BARRA_INVERTIDA: "\\" > |
+  < ESPACIO_BLANCO: " " > | 
+  < TABULADOR: "\t" > | 
+  < NUEVA_LINEA: "\n" > | 
+  < RETORNO_CARRO: "\r" > |
+  < CUERPO_COMENTARIO: ~["\n"] >
+}
+
+// Identificadores y variables
+TOKEN : {
+  < VARIABLE: (<LETRA> | <GUION_BAJO>) (<LETRA> | <DIGITO> | <GUION_BAJO>)* > | 
+  < ENTERO: <DIGITO> (<DIGITO>)* > |
+  < DECIMAL: (<DIGITO>)* <PUNTO> (<DIGITO>)* > |
+  < CADENA_DOBLE: <COMILLA_DOBLE> (<LETRA> | <DIGITO> | <GUION_BAJO> | <PUNTO>)* <COMILLA_DOBLE> > |
+  < CADENA_SIMPLE: <COMILLA_SIMPLE> (<LETRA> | <DIGITO> | <GUION_BAJO> | <PUNTO>)* <COMILLA_SIMPLE> > |
+  < COMENTARIO_LINEA: "//" (<CUERPO_COMENTARIO>)* > |
+  < ESPACIO: <ESPACIO_BLANCO> (<ESPACIO_BLANCO> | <TABULADOR> | <RETORNO_CARRO> | <NUEVA_LINEA>)* >
+}
+
+
