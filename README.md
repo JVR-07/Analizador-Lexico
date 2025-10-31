@@ -1,4 +1,14 @@
 ![Wallpaper](https://raw.githubusercontent.com/JVR-07/College-Projects/refs/heads/main/Resource/wallpaper_itt.png)
+---
+**Autor:** Javier Machado Sánchez
+  
+**Institución:** Instituto Tecnológico de Tijuana
+  
+**Materia:** Lenguajes y Autómatas II.
+  
+**Profesor:** Erasmo Estrada Peña.
+  
+**Fecha:** 30 de Octubre del 2025.
 # Analizador Léxico Multilenguaje – JavaCC
 Este proyecto implementa un **analizador léxico** desarrollado con **JavaCC (Java Compiler Compiler)**, diseñado para reconocer y clasificar tokens de diferentes lenguajes de programación.
 El analizador fue entrenado con más de **300 palabras clave**, que abarcan conceptos de **C, C++, Java, Python, JavaScript, Rust, SQL**, entre otros.
@@ -93,12 +103,6 @@ TOKEN : {
 - El proyecto demuestra cómo reconocer múltiples lenguajes en una sola gramática.
 - La modularidad de `main.jj` facilita extender el analizador para futuras fases de compilación (parser, AST, etc.).
 - La clasificación de 300 palabras clave abarca las estructuras fundamentales de varios lenguajes modernos, lo que lo hace una excelente base para un analizador léxico multilenguaje.
-# Autor
-**Javier Machado Sánchez.**
-Instituto Tecnológico de Tijuana.
-**Materia**: Lenguajes y Autómatas II.
-Profesor: Erasmo Estrada Peña.
-30 de Octubre del 2025.
 # Lista de tokens
 ## Palabras Reservadas
 | Token | Expresión Regular | Lexema |
