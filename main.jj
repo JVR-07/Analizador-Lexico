@@ -5,10 +5,17 @@ options {
 PARSER_BEGIN(Main)
 import java.io.*;
 import java.util.*;
+// Imports añadidos para la tabla de símbolos
+import java.util.List;
+import java.util.ArrayList;
 
 public class Main {
 
   private static final Map<Integer, String> TOKEN_NAMES = new HashMap<>();
+  
+  // 1. Tabla de valores (símbolos)
+  private static final List<String> SYMBOL_TABLE = new ArrayList<>();
+  
   static {
     // 1) Intentamos poblar TOKEN_NAMES con los nombres simbólicos (MainConstants.*)
     try {
@@ -26,7 +33,7 @@ public class Main {
         }
     } catch (Throwable t) {
         // Si algo falla, dejamos TOKEN_NAMES vacío para usar fallback más abajo.
-      }
+    }
 
     // 2) Complemento: si hay índices no mapeados, rellenamos con tokenImage (representación literal).
     try {
@@ -42,7 +49,6 @@ public class Main {
     
   public static void main(String[] args) throws Exception {
     Scanner sc = new Scanner(System.in);
-
     while (true) {
         System.out.println("\n=== Analizador Léxico ===");
         System.out.println("1. Ingresar texto manualmente");
@@ -51,7 +57,7 @@ public class Main {
         System.out.print("> ");
 
         String op = sc.nextLine().trim();
-            switch (op) {
+        switch (op) {
                 case "1":
                     analizarInteractivo(sc);
                     break;
@@ -69,7 +75,7 @@ public class Main {
 
   private static void analizarInteractivo(Scanner sc) {
     System.out.println("Modo interactivo (Ctrl + C o 'salir' para terminar)");
-      while (true) {
+    while (true) {
           System.out.print("> ");
           String input = sc.nextLine();
           if (input.equalsIgnoreCase("salir")) break;
@@ -88,33 +94,88 @@ public class Main {
         String linea;
         while ((linea = br.readLine()) != null)
             contenido.append(linea).append("\n");
-            br.close();
+        br.close();
             analizarCadena(contenido.toString());
       } catch (IOException e) {
             System.err.println("Error al leer el archivo: " + e.getMessage());
-        }
+      }
   }
 
+  // --- INICIO DE MODIFICACIÓN ---
+  // 2. Método 'analizarCadena' actualizado con la nueva lógica de formato
   private static void analizarCadena(String input) {
+    // Limpiar la tabla de símbolos para cada nuevo análisis
+    SYMBOL_TABLE.clear();
+
+    // Imprimir la cabecera de la tabla
+    System.out.println("| Nombre del token | Valor del atributo |");
+    System.out.println("|------------------|------------------|");
+
     try {
         MainTokenManager tm = new MainTokenManager(
             new SimpleCharStream(new StringReader(input))
         );
-
         Token token;
         while ((token = tm.getNextToken()).kind != MainConstants.EOF) {
-            if (token.kind == MainConstants.ESPACIO)
+            
+            // Omitir espacios Y comentarios
+            if (token.kind == MainConstants.ESPACIO || token.kind == MainConstants.COMENTARIO_LINEA) {
                 continue;
+            }
 
-            String tipo = TOKEN_NAMES.getOrDefault(token.kind, "DESCONOCIDO");
-            System.out.printf("→ Token: %-15s | Tipo: <%s>\n", token.image, tipo);
+            String tokenName = TOKEN_NAMES.getOrDefault(token.kind, "DESCONOCIDO");
+            String attributeValue = ""; // Valor por defecto (Regla 3)
+
+            // REGLA 1: Si es un identificador (VARIABLE, ENTERO, DECIMAL, CADENAS)
+            if (token.kind == MainConstants.VARIABLE ||
+                token.kind == MainConstants.ENTERO ||
+                token.kind == MainConstants.DECIMAL ||
+                token.kind == MainConstants.CADENA_DOBLE ||
+                token.kind == MainConstants.CADENA_SIMPLE)
+            {
+                // Buscar en la tabla de símbolos
+                int position = SYMBOL_TABLE.indexOf(token.image);
+                if (position == -1) {
+                    // Si no está, agregarlo
+                    SYMBOL_TABLE.add(token.image);
+                    position = SYMBOL_TABLE.size() - 1;
+                }
+                // El valor del atributo es su posición
+                attributeValue = "[" + position + "]";
+            }
+            // REGLA 2: Si es un token con múltiples lexemas (p.ej. "while" | "loop")
+            // (Comprobamos si la definición del token en tokenImage contiene un '|')
+            else if (token.kind < MainConstants.tokenImage.length && 
+                     MainConstants.tokenImage[token.kind] != null &&
+                     MainConstants.tokenImage[token.kind].contains("|"))
+            {
+                // El valor del atributo es el lexema específico encontrado
+                attributeValue = token.image;
+            }
+            // REGLA 3: Si es un token con un solo lexema (p.ej. "if")
+            // No hacemos nada, 'attributeValue' se queda como "" (vacío)
+            
+
+            // Imprimir la fila de la tabla formateada
+            System.out.printf("| %-16s | %-16s |\n", tokenName, attributeValue);
         }
       } catch (TokenMgrError e) {
           System.err.println("Error léxico: " + e.getMessage());
-        } catch (Exception e) {
+      } catch (Exception e) {
           System.err.println("Error general: " + e.getMessage());
-        }
+      }
+      
+      // --- INICIO DE NUEVA MODIFICACIÓN ---
+      // 3. Imprimir la tabla de símbolos al final
+      System.out.println("\n--- Tabla de Símbolos (Identificadores) ---");
+      System.out.println("| Posición | Valor (Lexema) |");
+      System.out.println("|----------|----------------|");
+      for (int i = 0; i < SYMBOL_TABLE.size(); i++) {
+          System.out.printf("| [%-8d] | %-14s |\n", i, SYMBOL_TABLE.get(i));
+      }
+      // --- FIN DE NUEVA MODIFICACIÓN ---
   }
+  // --- FIN DE MODIFICACIÓN ---
 }
 PARSER_END(Main)
 
@@ -202,7 +263,7 @@ PARSER_END(Main)
     < COINCIDE: "match" > |
     < CONTINUAR: "continue" > |
     < DETENER: "break" > |
-    < VE_A: "goto" > | 
+    < VE_A: "goto" > |
     < EN: "in" | "on" > |
 
   /* === Concurrencia, asincronía y referencias === */
@@ -343,7 +404,7 @@ TOKEN : {
   < FUTURO: "future" > | 
   < PROMESA: "promise" > | 
   < PARALELO: "parallel" > | 
-  < SECUENCIAL: "sequential" > | 
+  < SECUENCIAL: "sequential" > |
   < CRITICO: "critical" > | 
   < BARRERA: "barrier" > | 
   < SEMAFORO: "semaphore" > |
@@ -371,10 +432,10 @@ TOKEN : {
 
 // Caracteres individuales básicos
 TOKEN : {
-  < LETRA: ["a"-"z","A"-"Z"] > | 
+  < LETRA: ["a"-"z","A"-"Z"] > |
   < DIGITO: ["0"-"9"] > | 
   < GUION_BAJO: "_" > | 
-  < PUNTO: "." > | 
+  < PUNTO: "." > |
   < COMILLA_DOBLE: "\"" > |
   < COMILLA_SIMPLE: "'" > | 
   < BARRA_INVERTIDA: "\\" > |
@@ -391,9 +452,8 @@ TOKEN : {
   < ENTERO: <DIGITO> (<DIGITO>)* > |
   < DECIMAL: (<DIGITO>)* <PUNTO> (<DIGITO>)* > |
   < CADENA_DOBLE: <COMILLA_DOBLE> (<LETRA> | <DIGITO> | <GUION_BAJO> | <PUNTO>)* <COMILLA_DOBLE> > |
+  
   < CADENA_SIMPLE: <COMILLA_SIMPLE> (<LETRA> | <DIGITO> | <GUION_BAJO> | <PUNTO>)* <COMILLA_SIMPLE> > |
   < COMENTARIO_LINEA: "//" (<CUERPO_COMENTARIO>)* > |
   < ESPACIO: <ESPACIO_BLANCO> (<ESPACIO_BLANCO> | <TABULADOR> | <RETORNO_CARRO> | <NUEVA_LINEA>)* >
 }
-
-
